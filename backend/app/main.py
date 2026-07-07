@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db, init_db
 from .providers import ProviderError
-from .schemas import AnalyzeRequest, AnalyzeResponse
+from .schemas import AnalyzeRequest, AnalyzeResponse, ChartData, ExperienceLevel
 from . import service
 
 app = FastAPI(title="Personalized Stock Analysis", version="0.1.0")
@@ -45,4 +45,19 @@ def analyze(req: AnalyzeRequest, db: Session = Depends(get_db)):
         return service.analyze(db, req)
     except ProviderError as e:
         # Data-source problems (bad ticker, free-tier limits, auth) -> 502.
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.get("/chart/{symbol}", response_model=ChartData)
+def chart(
+    symbol: str,
+    interval: str = "1d",
+    level: ExperienceLevel = ExperienceLevel.beginner,
+    db: Session = Depends(get_db),
+):
+    try:
+        return service.chart_for_interval(db, symbol, interval, level)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ProviderError as e:
         raise HTTPException(status_code=502, detail=str(e))

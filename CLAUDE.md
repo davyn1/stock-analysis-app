@@ -39,6 +39,14 @@ locally with pandas-ta → LLM writes a narrative tailored to experience level
   `CURL_CA_BUNDLE` pointed at `backend/win_ca_bundle.pem`.
 - `frontend/standalone.html` is a legacy zero-build UI copy — don't maintain it.
 
+## Charting
+
+- Library: TradingView `lightweight-charts` v5 (`chart.addSeries(SeriesType, opts)`
+  API — v4 examples online use `addCandlestickSeries()`, which no longer exists).
+- Chart data rides on the `/analyze` response (`chart` field): candles + volume +
+  overlay lines, tailored per level via `chart_line_keys`/`chart_level_keys` in
+  `backend/app/tailoring.py`.
+
 ## Out of scope (per brief)
 
-Charts, fundamentals, auth, intraday data — don't add unprompted.
+Fundamentals, auth, intraday data — don't add unprompted.

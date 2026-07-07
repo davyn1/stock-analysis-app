@@ -1,6 +1,41 @@
+import { useEffect, useState } from "react";
 import IndicatorGrid from "./IndicatorGrid.jsx";
+import StockChart from "./StockChart.jsx";
+import { fetchChart } from "../api.js";
+
+const TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h", "4h", "1d", "1w"];
 
 export default function ResultCard({ data }) {
+  const [tf, setTf] = useState("1d");
+  const [chartData, setChartData] = useState(data.chart);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState(null);
+
+  // New analysis (symbol/level change) -> reset to the daily chart it shipped with.
+  useEffect(() => {
+    setTf("1d");
+    setChartData(data.chart);
+    setChartError(null);
+  }, [data]);
+
+  async function pickTimeframe(next) {
+    setTf(next);
+    setChartError(null);
+    if (next === "1d") {
+      setChartData(data.chart); // already in the analyze response, no fetch
+      return;
+    }
+    setChartLoading(true);
+    try {
+      setChartData(await fetchChart(data.symbol, next, data.level));
+    } catch (err) {
+      setChartError(err.message);
+      setChartData(null);
+    } finally {
+      setChartLoading(false);
+    }
+  }
+
   return (
     <section className="result-card">
       <header className="result-header">
@@ -12,6 +47,26 @@ export default function ResultCard({ data }) {
           {data.cached_explanation ? " · cached" : ""}
         </p>
       </header>
+
+      <div className="timeframes" role="tablist" aria-label="Chart timeframe">
+        {TIMEFRAMES.map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tf === t}
+            className={`tf-btn${tf === t ? " active" : ""}`}
+            onClick={() => pickTimeframe(t)}
+            disabled={chartLoading}
+          >
+            {t.toUpperCase()}
+          </button>
+        ))}
+        {chartLoading && <span className="tf-status">loading…</span>}
+      </div>
+
+      {chartError && <p className="error">⚠️ {chartError}</p>}
+      <StockChart chart={chartData} />
 
       <IndicatorGrid indicators={data.indicators} />
 

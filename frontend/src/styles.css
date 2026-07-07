@@ -81,6 +81,37 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   opacity: 0.6;
 }
 
+.timeframes {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.tf-btn {
+  background: transparent;
+  color: inherit;
+  border: 1px solid var(--border);
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+}
+.tf-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.tf-status { font-size: 0.75rem; opacity: 0.6; }
+
+.stock-chart {
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem;
+}
+
 .indicator-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

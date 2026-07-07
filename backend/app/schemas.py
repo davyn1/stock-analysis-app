@@ -17,6 +17,13 @@ class AnalyzeRequest(BaseModel):
     days: int = Field(180, ge=60, le=730, description="Lookback window in calendar days")
 
 
+class ChartData(BaseModel):
+    candles: list[dict[str, Any]]        # [{time, open, high, low, close}]
+    volume: list[dict[str, Any]]         # [{time, value}]
+    lines: dict[str, list[dict[str, Any]]]  # overlay line series per indicator key
+    levels: dict[str, float]             # horizontal price lines (support, fibs, ...)
+
+
 class AnalyzeResponse(BaseModel):
     symbol: str
     as_of: str
@@ -26,3 +33,4 @@ class AnalyzeResponse(BaseModel):
     explanation: str
     data_source: str
     cached_explanation: bool
+    chart: ChartData

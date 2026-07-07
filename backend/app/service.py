@@ -8,7 +8,30 @@ from . import indicators, tailoring
 from .explainers import generate_explanation
 from .models import PriceCache, ExplanationCache
 from .providers import get_provider, ProviderError
-from .schemas import AnalyzeRequest, AnalyzeResponse
+from .schemas import AnalyzeRequest, AnalyzeResponse, ChartData
+
+
+def _build_chart(df: pd.DataFrame, all_ind: dict, level, intraday: bool = False) -> ChartData:
+    """Shape price data + overlays for lightweight-charts, tailored to the level."""
+    dates = [indicators.format_time(ts, intraday) for ts in df.index]
+    candles = [
+        {"time": d, "open": round(float(o), 4), "high": round(float(h), 4),
+         "low": round(float(lo), 4), "close": round(float(c), 4)}
+        for d, o, h, lo, c in zip(dates, df["open"], df["high"], df["low"], df["close"])
+    ]
+    volume = [
+        # Color volume bars by whether the day closed up or down.
+        {"time": d, "value": int(v), "color": "#2e8b5766" if c >= o else "#c0392b66"}
+        for d, v, o, c in zip(dates, df["volume"], df["open"], df["close"])
+    ]
+    all_series = indicators.compute_series(df, intraday)
+    lines = {k: all_series[k] for k in tailoring.chart_line_keys(level) if k in all_series}
+    levels = {
+        k: all_ind[k]
+        for k in tailoring.chart_level_keys(level)
+        if all_ind.get(k) is not None
+    }
+    return ChartData(candles=candles, volume=volume, lines=lines, levels=levels)
 
 
 def _load_cached_prices(db: Session, symbol: str) -> pd.DataFrame | None:
@@ -65,6 +88,52 @@ def _prices_are_fresh(df: pd.DataFrame) -> bool:
     return age_days <= 4
 
 
+VALID_INTERVALS = ("1m", "3m", "5m", "15m", "1h", "4h", "1d", "1w")
+
+# Intraday bars go stale in minutes, so they get small in-memory TTL caches
+# instead of the SQLite daily cache. Two layers: raw frames (shared across
+# levels) and built payloads (skip recompute on repeat clicks). Fine for a
+# 2-user single-process app.
+_INTERVAL_TTL_SECONDS = 300
+_interval_cache: dict[tuple[str, str], tuple[float, pd.DataFrame]] = {}
+_payload_cache: dict[tuple[str, str, str], tuple[float, ChartData]] = {}
+
+
+def chart_for_interval(db: Session, symbol: str, interval: str, level) -> ChartData:
+    """Chart payload for any timeframe. Daily reuses the SQLite cache; other
+    intervals fetch on demand (with a short in-memory cache)."""
+    import time
+
+    symbol = symbol.upper().strip()
+    interval = interval.lower()
+    if interval not in VALID_INTERVALS:
+        raise ValueError(f"interval must be one of {', '.join(VALID_INTERVALS)}")
+
+    pkey = (symbol, interval, level.value)
+    hit = _payload_cache.get(pkey)
+    if hit and time.time() - hit[0] < _INTERVAL_TTL_SECONDS:
+        return hit[1]
+
+    if interval == "1d":
+        df = _load_cached_prices(db, symbol)
+        if not _prices_are_fresh(df):
+            df = get_provider().get_daily_ohlcv(symbol, 180)
+            _save_prices(db, symbol, df)
+    else:
+        key = (symbol, interval)
+        hit = _interval_cache.get(key)
+        if hit and time.time() - hit[0] < _INTERVAL_TTL_SECONDS:
+            df = hit[1]
+        else:
+            df = get_provider().get_ohlcv(symbol, interval)
+            _interval_cache[key] = (time.time(), df)
+
+    all_ind = indicators.compute_indicators(df)
+    payload = _build_chart(df, all_ind, level, intraday=interval not in ("1d", "1w"))
+    _payload_cache[pkey] = (time.time(), payload)
+    return payload
+
+
 def analyze(db: Session, req: AnalyzeRequest) -> AnalyzeResponse:
     symbol = req.symbol.upper().strip()
 
@@ -110,4 +179,5 @@ def analyze(db: Session, req: AnalyzeRequest) -> AnalyzeResponse:
         explanation=explanation,
         data_source=get_provider().name,
         cached_explanation=was_cached,
+        chart=_build_chart(df, all_ind, req.level),
     )

@@ -19,3 +19,14 @@ class PriceProvider(ABC):
         Raise ProviderError on any failure so the caller can surface a clear message.
         """
         raise NotImplementedError
+
+    def get_ohlcv(self, symbol: str, interval: str) -> pd.DataFrame:
+        """Return OHLCV at an app-level interval ('1m','3m','5m','15m','1h','4h','1w').
+
+        Optional capability — providers that can't serve intraday/weekly data keep
+        this default, which fails with a clear message.
+        """
+        raise ProviderError(
+            f"The {self.name!r} provider does not support interval data; "
+            "set PRICE_PROVIDER=yfinance for intraday timeframes."
+        )
