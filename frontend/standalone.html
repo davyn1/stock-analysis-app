@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Analysis</title>
+  <!-- Single-file React via CDN: zero build step, fine for a 2-user personal app.
+       Upgrade to a Vite project later if/when the chart phase begins. -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.4rem; }
+    form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1rem; }
+    label { display: flex; flex-direction: column; font-size: .8rem; gap: .25rem; }
+    input, select, button { padding: .5rem; font-size: 1rem; }
+    button { cursor: pointer; }
+    .card { border: 1px solid #8884; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+    .ind { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .4rem; }
+    .ind div { background: #8881; border-radius: 6px; padding: .4rem .6rem; font-size: .85rem; }
+    .explain { white-space: pre-wrap; line-height: 1.5; }
+    .err { color: #c0392b; }
+    .muted { opacity: .6; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const API = "http://localhost:8000";
+    const { useState } = React;
+
+    function App() {
+      const [symbol, setSymbol] = useState("AAPL");
+      const [level, setLevel] = useState("beginner");
+      const [data, setData] = useState(null);
+      const [error, setError] = useState(null);
+      const [loading, setLoading] = useState(false);
+
+      async function submit(e) {
+        e.preventDefault();
+        setLoading(true); setError(null); setData(null);
+        try {
+          const res = await fetch(`${API}/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbol, level }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.detail || "Request failed");
+          setData(json);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      return (
+        <div>
+          <h1>📈 Personalized Stock Analysis</h1>
+          <form onSubmit={submit}>
+            <label>Ticker
+              <input value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())} />
+            </label>
+            <label>Experience
+              <select value={level} onChange={e => setLevel(e.target.value)}>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </label>
+            <button disabled={loading}>{loading ? "Analyzing…" : "Analyze"}</button>
+          </form>
+
+          {error && <p className="err">⚠️ {error}</p>}
+
+          {data && (
+            <div className="card">
+              <h2>{data.symbol} — ${data.latest_close}</h2>
+              <p className="muted">
+                As of {data.as_of} · {data.level} · source: {data.data_source}
+                {data.cached_explanation ? " · (cached)" : ""}
+              </p>
+              <div className="ind">
+                {Object.entries(data.indicators).map(([k, v]) => (
+                  <div key={k}><strong>{k}</strong><br />{v === null ? "—" : String(v)}</div>
+                ))}
+              </div>
+              <h3>Explanation</h3>
+              <p className="explain">{data.explanation}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

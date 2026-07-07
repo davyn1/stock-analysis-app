@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Secrets & local DB
+.env
+*.db
+stock_cache.db
+
+# Machine-specific CA bundle (regenerate locally; see README)
+win_ca_bundle.pem
+
+# Node / frontend
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

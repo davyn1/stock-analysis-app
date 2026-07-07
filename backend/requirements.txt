@@ -1,0 +1,34 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Settings / env
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+
+# Data + indicators
+# pandas-ta 0.3.14b0 was pulled from PyPI; the maintained 0.4.x rewrite requires
+# numpy >= 2 (and fixes the old `from numpy import NaN` import bug), so we let pip
+# resolve numpy/pandas rather than pinning them.
+numpy>=2.0
+pandas>=2.2
+pandas-ta==0.4.71b0
+setuptools  # pandas-ta uses pkg_resources at import time
+
+# HTTP client for data providers (Finnhub, Twelve Data)
+httpx==0.28.1
+
+# yfinance provider (zero-key local testing; scrapes Yahoo, may be blocked on AWS)
+# Keep this current — older yfinance breaks when Yahoo changes its endpoints.
+yfinance==1.4.1
+
+# Database (SQLite via SQLAlchemy; swap URL for Postgres later)
+SQLAlchemy==2.0.36
+
+# Lets TLS use the OS trust store (helps on corporate machines behind a
+# TLS-inspecting proxy; harmless elsewhere).
+truststore==0.10.4
+
+# Claude API
+anthropic==0.42.0
