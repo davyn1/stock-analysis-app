@@ -6,6 +6,22 @@ import { fetchChart } from "../api.js";
 
 const TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h", "4h", "1d", "1w"];
 
+function PriceChange({ candles }) {
+  // Day-over-day change from the daily payload's last two complete bars.
+  if (!candles || candles.length < 2) return null;
+  const last = candles[candles.length - 1].close;
+  const prev = candles[candles.length - 2].close;
+  const delta = last - prev;
+  const pct = (delta / prev) * 100;
+  const up = delta >= 0;
+  return (
+    <span className={`price-change ${up ? "up" : "down"}`}>
+      {up ? "+" : "−"}${Math.abs(delta).toFixed(2)} ({up ? "+" : "−"}
+      {Math.abs(pct).toFixed(2)}%)
+    </span>
+  );
+}
+
 export default function ResultCard({ data }) {
   const [tf, setTf] = useState("1d");
   const [chartData, setChartData] = useState(data.chart);
@@ -42,6 +58,7 @@ export default function ResultCard({ data }) {
       <header className="result-header">
         <h2>
           {data.symbol} <span className="price">${data.latest_close.toLocaleString()}</span>
+          <PriceChange candles={data.chart?.candles} />
         </h2>
         <p className="meta">
           as of {data.as_of} · {data.level} · source: {data.data_source}

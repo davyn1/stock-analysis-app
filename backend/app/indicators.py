@@ -79,6 +79,7 @@ def compute_series(df: pd.DataFrame, intraday: bool = False) -> dict[str, list[d
     out: dict[str, list[dict]] = {}
     out["sma_20"] = _series_points(df.index, ta.sma(df["close"], length=20), intraday)
     out["sma_50"] = _series_points(df.index, ta.sma(df["close"], length=50), intraday)
+    out["rsi_14"] = _series_points(df.index, ta.rsi(df["close"], length=14), intraday)
     bb = ta.bbands(df["close"], length=20)
     if bb is not None and not bb.empty:
         out["bb_lower"] = _series_points(df.index, bb.iloc[:, 0], intraday)

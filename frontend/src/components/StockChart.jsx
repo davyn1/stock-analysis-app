@@ -37,7 +37,8 @@ export default function StockChart({ chart }) {
     // Intraday bars arrive as Unix timestamps; daily/weekly as date strings.
     const intraday = typeof chart.candles[0].time === "number";
     const lwChart = createChart(containerRef.current, {
-      height: 380,
+      height: 480, // price pane + RSI pane below
+
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: dark ? "#ccc" : "#333",
@@ -69,7 +70,10 @@ export default function StockChart({ chart }) {
     lwChart.priceScale("").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeries.setData(chart.volume);
 
-    for (const [key, points] of Object.entries(chart.lines ?? {})) {
+    // RSI renders in its own pane (0-100 scale); everything else overlays price.
+    const { rsi_14: rsiPoints, ...mainLines } = chart.lines ?? {};
+
+    for (const [key, points] of Object.entries(mainLines)) {
       const style = LINE_STYLES[key] ?? { color: "#888" };
       const line = lwChart.addSeries(LineSeries, {
         color: style.color,
@@ -79,6 +83,31 @@ export default function StockChart({ chart }) {
         crosshairMarkerVisible: false,
       });
       line.setData(points);
+    }
+
+    if (rsiPoints?.length) {
+      const rsiSeries = lwChart.addSeries(
+        LineSeries,
+        {
+          color: "#9b59b6",
+          lineWidth: 1.5,
+          priceLineVisible: false,
+          crosshairMarkerVisible: false,
+        },
+        1 // pane index 1: separate panel below the price pane
+      );
+      rsiSeries.setData(rsiPoints);
+      // Overbought/oversold guide bands.
+      rsiSeries.createPriceLine({
+        price: 70, color: "#c0392b88", lineWidth: 1,
+        lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "70",
+      });
+      rsiSeries.createPriceLine({
+        price: 30, color: "#2e8b5788", lineWidth: 1,
+        lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "30",
+      });
+      const rsiPane = lwChart.panes()[1];
+      if (rsiPane?.setHeight) rsiPane.setHeight(110);
     }
 
     for (const [key, price] of Object.entries(chart.levels ?? {})) {

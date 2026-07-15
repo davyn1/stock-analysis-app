@@ -42,7 +42,7 @@ def filter_indicators(all_indicators: dict, level: ExperienceLevel) -> dict:
 # Line series drawn over the candles, and horizontal price levels, per level.
 # Keys share the indicator vocabulary above.
 
-_CHART_LINES_BEGINNER = ["sma_20", "sma_50"]
+_CHART_LINES_BEGINNER = ["sma_20", "sma_50", "rsi_14"]  # rsi_14 renders in its own pane
 _CHART_LINES_INTERMEDIATE = ["bb_upper", "bb_lower"]
 
 _CHART_LEVELS_BEGINNER = ["support", "resistance"]

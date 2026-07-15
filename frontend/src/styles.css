@@ -20,8 +20,27 @@ body {
   padding: 0 1rem;
 }
 
-h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
-.subtitle { opacity: 0.7; margin-top: 0; font-size: 0.9rem; }
+h1 { font-size: 1.5rem; margin: 0; }
+.subtitle { opacity: 0.7; margin: 0.15rem 0 0; font-size: 0.9rem; }
+
+.app-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  padding: 6px;
+}
+.brand-mark svg { width: 100%; height: 100%; }
 
 .analyze-form {
   display: flex;
@@ -52,6 +71,14 @@ button {
   color: inherit;
 }
 
+/* The select's transparent background bleeds into the native options popup,
+   leaving options grey until hovered. Canvas/CanvasText are CSS system colors
+   that follow the active light/dark scheme. */
+option {
+  background: Canvas;
+  color: CanvasText;
+}
+
 button {
   cursor: pointer;
   background: var(--accent);
@@ -65,6 +92,80 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   color: var(--error);
   font-weight: 500;
 }
+
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.error-box {
+  border: 1px solid #c0392b55;
+  background: #c0392b14;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+.error-box strong { color: var(--error); }
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  opacity: 0.75;
+}
+.empty-state .empty-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 0.9rem;
+  color: var(--accent);
+  opacity: 0.8;
+}
+.empty-state .empty-icon svg { width: 100%; height: 100%; }
+.empty-state p {
+  max-width: 30rem;
+  margin: 0 auto;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.skeleton-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.skeleton-row, .skeleton-block {
+  background: var(--tile);
+  border-radius: 6px;
+  height: 0.95rem;
+  margin-bottom: 0.7rem;
+}
+.skeleton-block { height: 220px; }
+.skeleton-row.w40 { width: 40%; }
+.skeleton-row.w60 { width: 60%; }
+.skeleton-row.w70 { width: 70%; }
+.skeleton-row.w90 { width: 90%; }
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton-row, .skeleton-block {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+}
+
+.price-change {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.price-change.up { color: var(--accent); }
+.price-change.down { color: var(--error); }
 
 .result-card {
   border: 1px solid var(--border);
@@ -215,4 +316,122 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   font-size: 0.75rem;
   opacity: 0.55;
   font-style: italic;
+}
+
+/* ---------- Landing page ---------- */
+
+.landing {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem 2rem;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-hero {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.landing-hero h1 {
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.1rem;
+}
+
+.landing-accent { color: var(--accent); }
+
+.landing-sub {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  opacity: 0.75;
+  max-width: 34rem;
+  margin: 0 auto 2.2rem;
+}
+
+.landing-cta {
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 0.85rem 2.2rem;
+  border-radius: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.landing-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px #2e8b5744;
+}
+.landing-cta:focus-visible,
+.home-link:focus-visible,
+.tf-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.landing-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.feature {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.4rem 1.25rem;
+}
+
+.feature-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+  margin-bottom: 0.8rem;
+}
+.feature-icon svg { width: 100%; height: 100%; }
+
+.feature h2 {
+  font-size: 1rem;
+  margin: 0 0 0.4rem;
+}
+
+.feature p {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.landing-footer {
+  margin-top: auto;
+  text-align: center;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Analyzer view: home link */
+.home-link {
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 0.25rem 0.4rem;
+  margin: 0 0 0.75rem -0.4rem;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  font-weight: 500;
+}
+.home-link:hover { opacity: 1; }
+
+/* Gentle entrance, skipped entirely for reduced-motion users */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero, .feature {
+    animation: rise 0.45s ease-out both;
+  }
+  .feature:nth-child(2) { animation-delay: 0.08s; }
+  .feature:nth-child(3) { animation-delay: 0.16s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
