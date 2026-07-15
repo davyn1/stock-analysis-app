@@ -54,4 +54,8 @@ class TwelveDataProvider(PriceProvider):
         # Values arrive newest-first as strings; cast and sort ascending.
         for col in ("open", "high", "low", "close", "volume"):
             df[col] = pd.to_numeric(df[col], errors="coerce")
-        return df[["open", "high", "low", "close", "volume"]].sort_index()
+        df = df[["open", "high", "low", "close", "volume"]].sort_index()
+        # Incomplete bars (NaN prices after coercion) never enter the app.
+        df = df.dropna(subset=["open", "high", "low", "close"])
+        df["volume"] = df["volume"].fillna(0)
+        return df

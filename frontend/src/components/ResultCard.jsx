@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import IndicatorGrid from "./IndicatorGrid.jsx";
+import SignalList from "./SignalList.jsx";
 import StockChart from "./StockChart.jsx";
 import { fetchChart } from "../api.js";
 
@@ -67,6 +68,7 @@ export default function ResultCard({ data }) {
 
       {chartError && <p className="error">⚠️ {chartError}</p>}
       <StockChart chart={chartData} />
+      <SignalList signals={chartData?.signals} />
 
       <IndicatorGrid indicators={data.indicators} />
 

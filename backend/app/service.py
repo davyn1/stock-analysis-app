@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from . import indicators, tailoring
+from . import indicators, signals, tailoring
 from .explainers import generate_explanation
 from .models import PriceCache, ExplanationCache
 from .providers import get_provider, ProviderError
@@ -31,7 +31,13 @@ def _build_chart(df: pd.DataFrame, all_ind: dict, level, intraday: bool = False)
         for k in tailoring.chart_level_keys(level)
         if all_ind.get(k) is not None
     }
-    return ChartData(candles=candles, volume=volume, lines=lines, levels=levels)
+    return ChartData(
+        candles=candles,
+        volume=volume,
+        lines=lines,
+        levels=levels,
+        signals=signals.detect_signals(df, intraday),
+    )
 
 
 def _load_cached_prices(db: Session, symbol: str) -> pd.DataFrame | None:

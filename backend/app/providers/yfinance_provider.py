@@ -53,6 +53,8 @@ class YFinanceProvider(PriceProvider):
         )
         df.index = pd.to_datetime(df.index, utc=True)  # keep intraday times, no normalize
         df = df[["open", "high", "low", "close", "volume"]].sort_index()
+        df = df.dropna(subset=["open", "high", "low", "close"])
+        df["volume"] = df["volume"].fillna(0)
 
         if resample_rule:
             df = (
@@ -87,4 +89,9 @@ class YFinanceProvider(PriceProvider):
         # Normalize to a tz-aware UTC date index to match the other providers.
         df.index = pd.to_datetime(df.index, utc=True).normalize()
         df.index.name = "date"
-        return df[["open", "high", "low", "close", "volume"]].sort_index()
+        df = df[["open", "high", "low", "close", "volume"]].sort_index()
+        # Yahoo sometimes appends an in-progress/placeholder bar with NaN prices
+        # (e.g. today's session before close) — incomplete bars never enter the app.
+        df = df.dropna(subset=["open", "high", "low", "close"])
+        df["volume"] = df["volume"].fillna(0)
+        return df

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
   LineSeries,
@@ -90,6 +91,19 @@ export default function StockChart({ chart }) {
         axisLabelVisible: true,
         title: style.title,
       });
+    }
+
+    // Signal markers: ▲ under bullish bars, ▼ above bearish bars.
+    if (chart.signals?.length) {
+      createSeriesMarkers(
+        candleSeries,
+        chart.signals.map((s) => ({
+          time: s.time,
+          position: s.direction === "bullish" ? "belowBar" : "aboveBar",
+          shape: s.direction === "bullish" ? "arrowUp" : "arrowDown",
+          color: s.direction === "bullish" ? "#2e8b57" : "#c0392b",
+        }))
+      );
     }
 
     lwChart.timeScale().fitContent();

@@ -47,6 +47,17 @@ locally with pandas-ta → LLM writes a narrative tailored to experience level
   overlay lines, tailored per level via `chart_line_keys`/`chart_level_keys` in
   `backend/app/tailoring.py`.
 
+## Trading phase (long-term direction)
+
+End goal is a self-trading spinoff. Standing decisions:
+- The LLM never decides trades — strategy logic is deterministic code (extends
+  the existing "LLM never calculates" rule).
+- Analyzer endpoints stay open; ALL trading endpoints go under a `/trading/*`
+  router guarded by an auth dependency (auth built when the first trading
+  feature or public deployment lands, whichever comes first).
+- Order of build: signals → backtester → watchlist scanner → paper trading →
+  live (user pulls the trigger on real money; broker keys server-side only).
+
 ## Out of scope (per brief)
 
-Fundamentals, auth, intraday data — don't add unprompted.
+Fundamentals — don't add unprompted.

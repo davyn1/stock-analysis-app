@@ -22,6 +22,7 @@ class ChartData(BaseModel):
     volume: list[dict[str, Any]]         # [{time, value}]
     lines: dict[str, list[dict[str, Any]]]  # overlay line series per indicator key
     levels: dict[str, float]             # horizontal price lines (support, fibs, ...)
+    signals: list[dict[str, Any]]        # [{time, type, label, direction, price}]
 
 
 class AnalyzeResponse(BaseModel):
