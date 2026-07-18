@@ -55,8 +55,9 @@ End goal is a self-trading spinoff. Standing decisions:
 - Analyzer endpoints stay open; ALL trading endpoints go under a `/trading/*`
   router guarded by an auth dependency (auth built when the first trading
   feature or public deployment lands, whichever comes first).
-- Order of build: signals → backtester → watchlist scanner → paper trading →
-  live (user pulls the trigger on real money; broker keys server-side only).
+- Order of build: signals (DONE — `backend/app/signals.py`, markers + list in
+  UI) → backtester (NEXT) → watchlist scanner → paper trading → live (user
+  pulls the trigger on real money; broker keys server-side only).
 
 ## Out of scope (per brief)
 
