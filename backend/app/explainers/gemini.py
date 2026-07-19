@@ -15,7 +15,10 @@ BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 class GeminiExplainer(Explainer):
     name = "gemini"
 
-    def generate(self, symbol: str, level: ExperienceLevel, indicators: dict) -> str:
+    def generate(
+        self, symbol: str, level: ExperienceLevel, indicators: dict,
+        verdict: dict | None = None,
+    ) -> str:
         if not settings.google_api_key:
             return raw_fallback(symbol, level, indicators, "Google API key not set")
 
@@ -23,7 +26,7 @@ class GeminiExplainer(Explainer):
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
             "contents": [
-                {"role": "user", "parts": [{"text": build_user_content(symbol, level, indicators)}]}
+                {"role": "user", "parts": [{"text": build_user_content(symbol, level, indicators, verdict)}]}
             ],
             "generationConfig": {
                 "maxOutputTokens": 1200,

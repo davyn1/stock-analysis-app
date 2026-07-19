@@ -9,7 +9,10 @@ from .base import Explainer, SYSTEM_PROMPT, build_user_content, raw_fallback
 class ClaudeExplainer(Explainer):
     name = "claude"
 
-    def generate(self, symbol: str, level: ExperienceLevel, indicators: dict) -> str:
+    def generate(
+        self, symbol: str, level: ExperienceLevel, indicators: dict,
+        verdict: dict | None = None,
+    ) -> str:
         if not settings.anthropic_api_key:
             return raw_fallback(symbol, level, indicators, "Anthropic API key not set")
 
@@ -19,7 +22,7 @@ class ClaudeExplainer(Explainer):
                 model=settings.anthropic_model,
                 max_tokens=900,
                 system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": build_user_content(symbol, level, indicators)}],
+                messages=[{"role": "user", "content": build_user_content(symbol, level, indicators, verdict)}],
             )
             return "".join(b.text for b in msg.content if b.type == "text").strip()
         except Exception as e:

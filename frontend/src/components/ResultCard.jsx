@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import Backtester from "./Backtester.jsx";
 import IndicatorGrid from "./IndicatorGrid.jsx";
 import SignalList from "./SignalList.jsx";
 import StockChart from "./StockChart.jsx";
+import VerdictCard from "./VerdictCard.jsx";
 import { fetchChart } from "../api.js";
 
 const TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h", "4h", "1d", "1w"];
@@ -66,6 +68,8 @@ export default function ResultCard({ data }) {
         </p>
       </header>
 
+      <VerdictCard verdict={data.verdict} />
+
       <div className="timeframes" role="tablist" aria-label="Chart timeframe">
         {TIMEFRAMES.map((t) => (
           <button
@@ -91,6 +95,8 @@ export default function ResultCard({ data }) {
 
       <h3>Explanation</h3>
       <p className="explanation">{data.explanation}</p>
+
+      <Backtester symbol={data.symbol} />
 
       <p className="disclaimer">Educational analysis only — not financial advice.</p>
     </section>

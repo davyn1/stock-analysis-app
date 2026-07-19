@@ -47,18 +47,29 @@ locally with pandas-ta → LLM writes a narrative tailored to experience level
   overlay lines, tailored per level via `chart_line_keys`/`chart_level_keys` in
   `backend/app/tailoring.py`.
 
-## Trading phase (long-term direction)
+## Product direction (decided 2026-07-19)
 
-End goal is a self-trading spinoff. Standing decisions:
-- The LLM never decides trades — strategy logic is deterministic code (extends
-  the existing "LLM never calculates" rule).
-- Analyzer endpoints stay open; ALL trading endpoints go under a `/trading/*`
-  router guarded by an auth dependency (auth built when the first trading
-  feature or public deployment lands, whichever comes first).
-- Order of build: signals (DONE — `backend/app/signals.py`, markers + list in
-  UI) → backtester (NEXT) → watchlist scanner → paper trading → live (user
-  pulls the trigger on real money; broker keys server-side only).
+This app is the ANALYZER, full stop. End goal: for any ticker, a deterministic
+per-horizon verdict — is it favorable to buy/hold short-term, medium-term,
+long-term, or not — shown as a verdict card and interpreted by the LLM.
+- Verdict logic is deterministic code (`backend/app/verdict.py`); the LLM only
+  interprets a verdict it's given, never decides or re-decides one. Same hard
+  rule as "LLM never calculates".
+- Phase 1 (current): technicals-only verdicts. Phase 2 (planned, user-approved):
+  fundamentals via Finnhub (P/E, earnings, growth) as a second evidence layer
+  for the long-term verdict. This supersedes the old "fundamentals out of
+  scope" rule — but don't start phase 2 unprompted.
 
-## Out of scope (per brief)
+## Trading (PARKED)
 
-Fundamentals — don't add unprompted.
+Automated trading (watchlist scanner → paper → live) is on ice. If it returns,
+it likely becomes a separately deployed app; the `/trading/*` seam is the
+boundary that makes that split mechanical. What stays:
+- Signals (`backend/app/signals.py`) and the backtester
+  (`backend/app/backtest.py`, `/trading/backtest`, strategy picker + equity
+  curve in UI) remain — they serve the analyzer ("how did this strategy compare
+  to holding?" is analysis evidence). Backtester panel stays visible in the UI.
+- `/trading/*` auth: `app/auth.py` `require_trading_auth` is OPEN when
+  `TRADING_TOKEN` is unset (local dev) and ENFORCED (`Bearer` token) once it's
+  set. The frontend sends `VITE_TRADING_TOKEN` if defined.
+- The LLM never decides trades — any strategy logic is deterministic code.

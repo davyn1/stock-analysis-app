@@ -31,7 +31,41 @@ class AnalyzeResponse(BaseModel):
     level: ExperienceLevel
     latest_close: float
     indicators: dict[str, Any]   # only the indicators surfaced for this level
+    verdict: dict[str, Any]      # deterministic per-horizon verdict (verdict.py)
     explanation: str
     data_source: str
     cached_explanation: bool
     chart: ChartData
+
+
+# --- Trading: backtester ----------------------------------------------------
+
+class BacktestRequest(BaseModel):
+    symbol: str = Field(..., examples=["AAPL"])
+    strategy: str = Field("sma_cross", description="Strategy key from backtest.STRATEGIES")
+    days: int = Field(730, ge=120, le=1825, description="History window to backtest over")
+    initial_cash: float = Field(10_000, gt=0)
+
+
+class BacktestResult(BaseModel):
+    symbol: str
+    strategy: str
+    strategy_label: str
+    strategy_description: str
+    start: str
+    end: str
+    bars: int
+    initial_cash: float
+    final_equity: float
+    total_return_pct: float
+    buy_hold_return_pct: float
+    num_trades: int
+    win_rate_pct: float | None
+    avg_trade_pct: float | None
+    best_trade_pct: float | None
+    worst_trade_pct: float | None
+    max_drawdown_pct: float
+    exposure_pct: float
+    trades: list[dict[str, Any]]          # [{entry_time, entry_price, exit_time, exit_price, return_pct, bars_held, open}]
+    equity_curve: list[dict[str, Any]]    # [{time, value}] — strategy account value
+    benchmark_curve: list[dict[str, Any]]  # [{time, value}] — buy-and-hold

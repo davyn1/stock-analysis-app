@@ -39,16 +39,28 @@ SYSTEM_PROMPT = (
     "values imply together (trend, momentum, stretched vs. calm, key levels).\n"
     "- You may name indicators and cite their values, just don't teach what they are.\n"
     "- If an indicator value is null/missing, say it's unavailable rather than guessing.\n"
+    "- If a pre-computed VERDICT is provided, it was decided by the app's deterministic "
+    "rules. Explain WHY its factors point the way they do, per horizon. Never override, "
+    "re-grade, soften, or contradict the verdict, and never produce your own rating.\n"
     "- This is educational analysis, NOT financial advice. Do not tell the reader to "
     "buy or sell. End with a one-line reminder that this isn't financial advice."
 )
 
 
-def build_user_content(symbol: str, level: ExperienceLevel, indicators: dict) -> str:
+def build_user_content(
+    symbol: str, level: ExperienceLevel, indicators: dict, verdict: dict | None = None
+) -> str:
+    verdict_block = (
+        f"App-computed verdict (deterministic — interpret it, do not change it):\n"
+        f"{json.dumps(verdict, indent=2)}\n\n"
+        if verdict
+        else ""
+    )
     return (
         f"Stock: {symbol}\n"
         f"Reader level guidance: {LEVEL_GUIDANCE[level]}\n\n"
         f"Pre-computed indicator values (JSON):\n{json.dumps(indicators, indent=2)}\n\n"
+        f"{verdict_block}"
         f"Write the explanation now."
     )
 
@@ -66,6 +78,10 @@ class Explainer(ABC):
     name: str = "base"
 
     @abstractmethod
-    def generate(self, symbol: str, level: ExperienceLevel, indicators: dict) -> str:
-        """Return a plain-language explanation of the given indicator values."""
+    def generate(
+        self, symbol: str, level: ExperienceLevel, indicators: dict,
+        verdict: dict | None = None,
+    ) -> str:
+        """Return a plain-language explanation of the given indicator values
+        (and, when provided, the app's pre-decided verdict)."""
         raise NotImplementedError

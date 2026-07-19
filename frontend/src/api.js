@@ -16,6 +16,14 @@ async function parseOrThrow(res, fallbackMsg) {
   return json;
 }
 
+// /trading/* is guarded by an auth seam that's open in local dev and enforced
+// once a token is configured. Send the token when one is provided at build time
+// (VITE_TRADING_TOKEN); harmless when the endpoint is open.
+function tradingHeaders(extra = {}) {
+  const token = import.meta.env.VITE_TRADING_TOKEN;
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+}
+
 export async function fetchChart(symbol, interval, level) {
   const params = new URLSearchParams({ interval, level });
   let res;
@@ -42,4 +50,33 @@ export async function analyze({ symbol, level }) {
     throw new Error(err.name === "TimeoutError" ? "Analysis timed out — try again." : err.message);
   }
   return parseOrThrow(res, "Request failed");
+}
+
+export async function fetchStrategies() {
+  let res;
+  try {
+    res = await fetch(`${BASE}/trading/strategies`, {
+      headers: tradingHeaders(),
+      signal: withTimeout(),
+    });
+  } catch (err) {
+    throw new Error(err.name === "TimeoutError" ? "Request timed out — try again." : err.message);
+  }
+  return parseOrThrow(res, "Could not load strategies");
+}
+
+export async function runBacktest({ symbol, strategy }) {
+  let res;
+  try {
+    res = await fetch(`${BASE}/trading/backtest`, {
+      method: "POST",
+      headers: tradingHeaders({ "Content-Type": "application/json" }),
+      // A backtest may fetch a few years of history on first run for a symbol.
+      body: JSON.stringify({ symbol, strategy }),
+      signal: withTimeout(60000),
+    });
+  } catch (err) {
+    throw new Error(err.name === "TimeoutError" ? "Backtest timed out — try again." : err.message);
+  }
+  return parseOrThrow(res, "Backtest failed");
 }

@@ -22,6 +22,23 @@ def _clean(value):
     return round(f, 4)
 
 
+def _last(series):
+    """Last value of a pandas-ta result that may be None or too short."""
+    if series is None or len(series) == 0:
+        return None
+    return _clean(series.iloc[-1])
+
+
+def _pct_change(close: pd.Series, bars: int):
+    """Percent change over the last `bars` trading bars; None if not enough history."""
+    if len(close) <= bars:
+        return None
+    prev = float(close.iloc[-1 - bars])
+    if prev == 0:
+        return None
+    return _clean((float(close.iloc[-1]) / prev - 1) * 100)
+
+
 def _support_resistance(df: pd.DataFrame, window: int = 20):
     """Simple recent support/resistance: rolling min(low)/max(high) over `window` bars."""
     recent = df.tail(window)
@@ -95,9 +112,22 @@ def compute_indicators(df: pd.DataFrame) -> dict:
     out: dict = {}
 
     # --- Trend: moving averages ---
-    out["sma_20"] = _clean(ta.sma(df["close"], length=20).iloc[-1])
-    out["sma_50"] = _clean(ta.sma(df["close"], length=50).iloc[-1])
-    out["ema_20"] = _clean(ta.ema(df["close"], length=20).iloc[-1])
+    out["sma_20"] = _last(ta.sma(df["close"], length=20))
+    out["sma_50"] = _last(ta.sma(df["close"], length=50))
+    out["ema_20"] = _last(ta.ema(df["close"], length=20))
+    out["sma_100"] = _last(ta.sma(df["close"], length=100))
+    out["sma_200"] = _last(ta.sma(df["close"], length=200))
+
+    # --- Longer-horizon context (verdict engine + display) ---
+    out["pct_change_3m"] = _pct_change(df["close"], 63)   # ~3 months of trading days
+    out["pct_change_1y"] = _pct_change(df["close"], 252)  # ~1 year of trading days
+    high_52w = df["high"].tail(252).max()
+    out["high_52w"] = _clean(high_52w)
+    out["pct_from_52w_high"] = (
+        _clean((float(df["close"].iloc[-1]) / float(high_52w) - 1) * 100)
+        if high_52w and float(high_52w) > 0
+        else None
+    )
 
     # --- Momentum: RSI ---
     out["rsi_14"] = _clean(ta.rsi(df["close"], length=14).iloc[-1])

@@ -7,7 +7,10 @@ from .schemas import ExperienceLevel
 
 # Indicator keys (from indicators.compute_indicators) grouped by the level at
 # which they first appear.
-_BEGINNER_KEYS = ["sma_20", "sma_50", "rsi_14", "support", "resistance"]
+_BEGINNER_KEYS = [
+    "sma_20", "sma_50", "rsi_14", "support", "resistance",
+    "pct_change_1y", "pct_from_52w_high",
+]
 
 _INTERMEDIATE_KEYS = [
     "macd", "macd_signal", "macd_histogram",
@@ -15,6 +18,7 @@ _INTERMEDIATE_KEYS = [
     "volume_latest", "volume_avg_20",
     "volume_at_support", "volume_at_resistance",
     "ema_20",
+    "sma_100", "sma_200", "pct_change_3m", "high_52w",
 ]
 
 _ADVANCED_KEYS = [

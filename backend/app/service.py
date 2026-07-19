@@ -4,11 +4,17 @@ from datetime import datetime, timezone
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from . import indicators, signals, tailoring
+from . import backtest, indicators, signals, tailoring, verdict as verdict_engine
 from .explainers import generate_explanation
 from .models import PriceCache, ExplanationCache
 from .providers import get_provider, ProviderError
-from .schemas import AnalyzeRequest, AnalyzeResponse, ChartData
+from .schemas import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    BacktestRequest,
+    BacktestResult,
+    ChartData,
+)
 
 
 def _build_chart(df: pd.DataFrame, all_ind: dict, level, intraday: bool = False) -> ChartData:
@@ -140,25 +146,33 @@ def chart_for_interval(db: Session, symbol: str, interval: str, level) -> ChartD
     return payload
 
 
+# The verdict's long horizon needs ~2 years of daily bars (SMA200 + 1y change),
+# regardless of how much the chart shows.
+VERDICT_HISTORY_DAYS = 730
+
+
 def analyze(db: Session, req: AnalyzeRequest) -> AnalyzeResponse:
     symbol = req.symbol.upper().strip()
 
-    # 1. Price data — cache first, fetch on miss/stale.
-    df = _load_cached_prices(db, symbol)
-    if not _prices_are_fresh(df):
-        provider = get_provider()
-        df = provider.get_daily_ohlcv(symbol, req.days)
-        if df.empty:
-            raise ProviderError(f"No price data returned for {symbol!r}.")
-        _save_prices(db, symbol, df)
+    # 1. Price data — always ensure the long verdict window (cache-backed; on a
+    # warm cache this fetches nothing). The chart still shows only req.days.
+    df_full = _ensure_history(db, symbol, VERDICT_HISTORY_DAYS)
+    if df_full is None or df_full.empty:
+        raise ProviderError(f"No price data returned for {symbol!r}.")
 
-    as_of = df.index[-1].strftime("%Y-%m-%d")
+    as_of = df_full.index[-1].strftime("%Y-%m-%d")
 
-    # 2. Compute all indicators, then 3. tailor to the level.
-    all_ind = indicators.compute_indicators(df)
+    # 2. Compute indicators on the full frame (rolling windows only use the most
+    # recent bars, so values match the old shorter frame — but SMA200/1y-change
+    # now have the history they need). Then tailor to the level.
+    all_ind = indicators.compute_indicators(df_full)
     surfaced = tailoring.filter_indicators(all_ind, req.level)
 
-    # 4. Explanation — cached per (symbol, as_of, level).
+    # 3. Verdict — deterministic, decided in code before the LLM sees anything.
+    events_full = signals.detect_signals(df_full)
+    the_verdict = verdict_engine.compute_verdict(df_full, all_ind, events_full)
+
+    # 4. Explanation — cached per (symbol, as_of, level); interprets the verdict.
     cached = (
         db.query(ExplanationCache)
         .filter_by(symbol=symbol, as_of=as_of, level=req.level.value)
@@ -167,7 +181,7 @@ def analyze(db: Session, req: AnalyzeRequest) -> AnalyzeResponse:
     if cached:
         explanation, was_cached = cached.explanation, True
     else:
-        explanation = generate_explanation(symbol, req.level, surfaced)
+        explanation = generate_explanation(symbol, req.level, surfaced, the_verdict)
         db.add(
             ExplanationCache(
                 symbol=symbol, as_of=as_of, level=req.level.value, explanation=explanation
@@ -176,14 +190,49 @@ def analyze(db: Session, req: AnalyzeRequest) -> AnalyzeResponse:
         db.commit()
         was_cached = False
 
+    # Chart keeps the requested window so the default view stays readable.
+    cutoff = df_full.index[-1] - pd.Timedelta(days=req.days)
+    df_view = df_full[df_full.index >= cutoff]
+
     return AnalyzeResponse(
         symbol=symbol,
         as_of=as_of,
         level=req.level,
-        latest_close=float(df["close"].iloc[-1]),
+        latest_close=float(df_full["close"].iloc[-1]),
         indicators=surfaced,
+        verdict=the_verdict,
         explanation=explanation,
         data_source=get_provider().name,
         cached_explanation=was_cached,
-        chart=_build_chart(df, all_ind, req.level),
+        chart=_build_chart(df_view, all_ind, req.level),
     )
+
+
+def _ensure_history(db: Session, symbol: str, days: int) -> pd.DataFrame | None:
+    """Like the analyze price step, but a backtest needs a long window, so also
+    refetch when the cache is fresh but doesn't span far enough back. _save_prices
+    only inserts missing dates, so a wider fetch backfills older bars in place."""
+    df = _load_cached_prices(db, symbol)
+    fresh = _prices_are_fresh(df)
+    span_ok = (
+        df is not None
+        and not df.empty
+        and (df.index[-1] - df.index[0]).days >= days * 0.8
+    )
+    if not (fresh and span_ok):
+        fetched = get_provider().get_daily_ohlcv(symbol, days)
+        if not fetched.empty:
+            _save_prices(db, symbol, fetched)
+        df = _load_cached_prices(db, symbol)
+    return df
+
+
+def run_backtest(db: Session, req: BacktestRequest) -> BacktestResult:
+    symbol = req.symbol.upper().strip()
+    df = _ensure_history(db, symbol, req.days)
+    if df is None or df.empty:
+        raise ProviderError(f"No price data returned for {symbol!r}.")
+
+    result = backtest.run_backtest(df, req.strategy, initial_cash=req.initial_cash)
+    result["symbol"] = symbol
+    return BacktestResult(**result)

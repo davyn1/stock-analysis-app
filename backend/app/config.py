@@ -24,5 +24,9 @@ class Settings(BaseSettings):
     # Storage
     database_url: str = "sqlite:///./stock_cache.db"
 
+    # Trading endpoints (/trading/*). Leave empty for open local dev; set on
+    # deploy to require `Authorization: Bearer <token>`. See app/auth.py.
+    trading_token: str = ""
+
 
 settings = Settings()

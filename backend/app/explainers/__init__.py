@@ -17,8 +17,10 @@ def get_explainer() -> Explainer:
     return ClaudeExplainer()
 
 
-def generate_explanation(symbol: str, level: ExperienceLevel, indicators: dict) -> str:
-    return get_explainer().generate(symbol, level, indicators)
+def generate_explanation(
+    symbol: str, level: ExperienceLevel, indicators: dict, verdict: dict | None = None
+) -> str:
+    return get_explainer().generate(symbol, level, indicators, verdict)
 
 
 __all__ = ["Explainer", "ClaudeExplainer", "GeminiExplainer", "get_explainer", "generate_explanation"]
