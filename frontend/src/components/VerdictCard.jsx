@@ -11,6 +11,33 @@ const VERDICT_COPY = {
 
 const DIRECTION_ICON = { bullish: "▲", bearish: "▼", neutral: "•", unavailable: "–" };
 
+// Factors grouped by evidence type; the group label only appears when a horizon
+// mixes groups (i.e. the long horizon once fundamentals are enabled).
+function FactorList({ factors }) {
+  const groups = [...new Set(factors.map((f) => f.group ?? "technicals"))];
+  return (
+    <ul className="verdict-factors">
+      {groups.map((g) => (
+        <li key={g}>
+          {groups.length > 1 && <span className="vf-group">{g}</span>}
+          <ul className="verdict-factors">
+            {factors
+              .filter((f) => (f.group ?? "technicals") === g)
+              .map((f) => (
+                <li key={f.label} className={`verdict-factor ${f.direction}`}>
+                  <span className="vf-icon">{DIRECTION_ICON[f.direction]}</span>
+                  <span>
+                    <strong>{f.label}.</strong> {f.detail}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Horizon({ h }) {
   const [open, setOpen] = useState(false);
   return (
@@ -28,18 +55,7 @@ function Horizon({ h }) {
       >
         {open ? "Hide factors" : `Why? ${h.score >= 0 ? "+" : ""}${h.score} of ${h.max_score} checks`}
       </button>
-      {open && (
-        <ul className="verdict-factors">
-          {h.factors.map((f) => (
-            <li key={f.label} className={`verdict-factor ${f.direction}`}>
-              <span className="vf-icon">{DIRECTION_ICON[f.direction]}</span>
-              <span>
-                <strong>{f.label}.</strong> {f.detail}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {open && <FactorList factors={h.factors} />}
     </div>
   );
 }

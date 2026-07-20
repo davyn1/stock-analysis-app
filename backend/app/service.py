@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from . import backtest, indicators, signals, tailoring, verdict as verdict_engine
+from . import backtest, fundamentals, indicators, signals, tailoring, verdict as verdict_engine
 from .explainers import generate_explanation
 from .models import PriceCache, ExplanationCache
 from .providers import get_provider, ProviderError
@@ -169,8 +169,11 @@ def analyze(db: Session, req: AnalyzeRequest) -> AnalyzeResponse:
     surfaced = tailoring.filter_indicators(all_ind, req.level)
 
     # 3. Verdict — deterministic, decided in code before the LLM sees anything.
+    # Fundamentals (phase 2) feed the long horizon; get_fundamentals returns
+    # None on any failure so analyze never breaks on this layer.
     events_full = signals.detect_signals(df_full)
-    the_verdict = verdict_engine.compute_verdict(df_full, all_ind, events_full)
+    fund = fundamentals.get_fundamentals(db, symbol)
+    the_verdict = verdict_engine.compute_verdict(df_full, all_ind, events_full, fund)
 
     # 4. Explanation — cached per (symbol, as_of, level); interprets the verdict.
     cached = (

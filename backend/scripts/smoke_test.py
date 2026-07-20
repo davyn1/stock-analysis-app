@@ -58,6 +58,26 @@ def main():
         print(f"  n={n}: " + "  ".join(
             f"{h['key']}={h['verdict']}({h['score']:+d}/{h['max_score']})" for h in v["horizons"]
         ))
+
+    # With fundamentals (phase 2): long horizon gains the fundamental factors
+    # and the basis flips. Synthetic strong-company metrics.
+    df_f = make_synthetic(300)
+    ind_f = indicators.compute_indicators(df_f)
+    ev_f = signals.detect_signals(df_f)
+    strong = {"pe_ttm": 22.0, "eps_growth_yoy": 12.0, "revenue_growth_yoy": 8.0,
+              "net_margin": 21.0, "debt_to_equity": 0.6, "roe": 28.0}
+    v_no = verdict.compute_verdict(df_f, ind_f, ev_f, None)
+    v_yes = verdict.compute_verdict(df_f, ind_f, ev_f, strong)
+    long_no = next(h for h in v_no["horizons"] if h["key"] == "long")
+    long_yes = next(h for h in v_yes["horizons"] if h["key"] == "long")
+    assert v_no["basis"] == "technicals-only", "basis without fundamentals"
+    assert "fundamentals" in v_yes["basis"], "basis with fundamentals"
+    assert long_yes["max_score"] == long_no["max_score"] + 6, "6 fundamental factors decidable"
+    assert long_yes["score"] == long_no["score"] + 6, "strong metrics all bullish"
+    fund_groups = {f["group"] for f in long_yes["factors"]}
+    assert fund_groups == {"technicals", "fundamentals"}, "factor groups"
+    print(f"  fundamentals off: long={long_no['verdict']}({long_no['score']:+d}/{long_no['max_score']})  "
+          f"on: long={long_yes['verdict']}({long_yes['score']:+d}/{long_yes['max_score']})")
     print()
 
     # --- Backtester: run every strategy and sanity-check the simulation math ---

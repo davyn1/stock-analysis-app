@@ -635,3 +635,13 @@ select:focus-visible {
 .verdict-factor.bearish .vf-icon { color: var(--error); }
 .verdict-factor.neutral .vf-icon, .verdict-factor.unavailable .vf-icon { opacity: 0.5; }
 .verdict-factor.unavailable { opacity: 0.55; }
+
+.vf-group {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  margin: 0.35rem 0 0.15rem;
+}

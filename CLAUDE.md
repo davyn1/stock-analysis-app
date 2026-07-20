@@ -55,10 +55,14 @@ long-term, or not — shown as a verdict card and interpreted by the LLM.
 - Verdict logic is deterministic code (`backend/app/verdict.py`); the LLM only
   interprets a verdict it's given, never decides or re-decides one. Same hard
   rule as "LLM never calculates".
-- Phase 1 (current): technicals-only verdicts. Phase 2 (planned, user-approved):
-  fundamentals via Finnhub (P/E, earnings, growth) as a second evidence layer
-  for the long-term verdict. This supersedes the old "fundamentals out of
-  scope" rule — but don't start phase 2 unprompted.
+- Phase 1 (DONE): technicals-only verdicts. Phase 2 (BUILT 2026-07-19):
+  fundamentals via Finnhub feed the LONG horizon only (`app/fundamentals.py`,
+  /stock/metric is free tier — candles is the paid one). Activates when
+  FINNHUB_API_KEY is set; without it the verdict degrades to technicals-only
+  and shows the fundamentals factor as unavailable. Cached one row per
+  (symbol, day) in fundamentals_cache. Metric key names are probed via
+  candidate lists (_METRIC_KEYS) — verify against a real response when a key
+  is first configured.
 
 ## Trading (PARKED)
 
