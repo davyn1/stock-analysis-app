@@ -12,15 +12,43 @@ against buy-and-hold.
 
 ## Screenshots
 
-![Analysis page for AAPL](docs/screenshots/analysis.png)
+<!-- Each image follows the viewer's GitHub theme. Regenerate both with scripts/take_screenshots.py. -->
 
-| Beginner explanation | Advanced explanation |
-|---|---|
-| ![Beginner explanation](docs/screenshots/explanation-beginner.png) | ![Advanced explanation](docs/screenshots/explanation-advanced.png) |
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/analysis-dark.png">
+  <img alt="Analysis page for AAPL" src="docs/screenshots/analysis.png">
+</picture>
 
-![Candlestick chart with indicator overlays and signals](docs/screenshots/chart.png)
+<table>
+  <tr>
+    <th>Beginner explanation</th>
+    <th>Advanced explanation</th>
+  </tr>
+  <tr>
+    <td valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/explanation-beginner-dark.png">
+        <img alt="Beginner explanation" src="docs/screenshots/explanation-beginner.png">
+      </picture>
+    </td>
+    <td valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/explanation-advanced-dark.png">
+        <img alt="Advanced explanation" src="docs/screenshots/explanation-advanced.png">
+      </picture>
+    </td>
+  </tr>
+</table>
 
-![Backtester results with equity curve](docs/screenshots/backtester.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/chart-dark.png">
+  <img alt="Candlestick chart with indicator overlays and signals" src="docs/screenshots/chart.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/backtester-dark.png">
+  <img alt="Backtester results with equity curve" src="docs/screenshots/backtester.png">
+</picture>
 
 ## How it works
 

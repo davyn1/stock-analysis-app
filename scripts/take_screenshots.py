@@ -7,7 +7,7 @@ Dev-only — Playwright is NOT in backend/requirements.txt. One-time setup:
 With the backend (:8000) and frontend (:5173) running:
     python scripts/take_screenshots.py [--url http://localhost:5173] [--symbol AAPL]
 
-Writes PNGs to docs/screenshots/. Fails loudly if the app shows an error or the
+Writes PNGs to docs/screenshots/, once per theme (dark ones end in -dark). Fails loudly if the app shows an error or the
 explanation is the raw fallback (missing key / LLM error), so a bad capture
 never silently ends up in the README.
 """
@@ -59,30 +59,36 @@ def main() -> None:
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport=VIEWPORT)
-        page.goto(args.url)
-        page.click(".landing-cta")
+        # The app follows prefers-color-scheme, so emulating it captures each
+        # theme; the README picks one per viewer with <picture>.
+        for scheme, suffix in (("light", ""), ("dark", "-dark")):
+            context = browser.new_context(viewport=VIEWPORT, color_scheme=scheme)
+            page = context.new_page()
+            page.goto(args.url)
+            page.click(".landing-cta")
 
-        # Beginner pass: full page view, beginner explanation, candlestick chart.
-        analyze(page, args.symbol, "beginner")
-        page.evaluate("window.scrollTo(0, 0)")
-        page.screenshot(path=OUT_DIR / "analysis.png")
-        print("saved docs/screenshots/analysis.png")
-        capture(page, ".explanation", "explanation-beginner.png")
-        capture(page, ".stock-chart", "chart.png")
+            # Beginner pass: full page view, beginner explanation, candlestick chart.
+            analyze(page, args.symbol, "beginner")
+            page.evaluate("window.scrollTo(0, 0)")
+            page.screenshot(path=OUT_DIR / f"analysis{suffix}.png")
+            print(f"saved docs/screenshots/analysis{suffix}.png")
+            capture(page, ".explanation", f"explanation-beginner{suffix}.png")
+            capture(page, ".stock-chart", f"chart{suffix}.png")
 
-        # Advanced pass: same ticker, deeper explanation.
-        analyze(page, args.symbol, "advanced")
-        capture(page, ".explanation", "explanation-advanced.png")
+            # Advanced pass: same ticker, deeper explanation.
+            analyze(page, args.symbol, "advanced")
+            capture(page, ".explanation", f"explanation-advanced{suffix}.png")
 
-        # Backtester: run the default strategy and wait for the equity curve.
-        page.click(".backtester .bt-controls button")
-        page.wait_for_selector(".bt-result, .backtester .error", timeout=60_000)
-        if page.locator(".backtester .error").count():
-            raise RuntimeError(f"Backtest error: {page.inner_text('.backtester .error')}")
-        page.wait_for_selector(".equity-chart canvas")
-        page.wait_for_timeout(CHART_SETTLE_MS)
-        capture(page, ".backtester", "backtester.png")
+            # Backtester: run the default strategy and wait for the equity curve.
+            page.click(".backtester .bt-controls button")
+            page.wait_for_selector(".bt-result, .backtester .error", timeout=60_000)
+            if page.locator(".backtester .error").count():
+                raise RuntimeError(f"Backtest error: {page.inner_text('.backtester .error')}")
+            page.wait_for_selector(".equity-chart canvas")
+            page.wait_for_timeout(CHART_SETTLE_MS)
+            capture(page, ".backtester", f"backtester{suffix}.png")
+
+            context.close()
 
         browser.close()
 
