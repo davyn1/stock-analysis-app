@@ -476,15 +476,18 @@ select:focus-visible {
 
 .bt-result { margin-top: 1rem; }
 
+/* 8 metrics -> two even rows of 4 (auto-fill gave 5 + 3 with tiles too narrow
+   for "Underperformed"); 2 columns on phones. */
 .bt-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 .bt-metric {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   background: var(--tile);
   border-radius: 8px;
   padding: 0.5rem 0.65rem;
@@ -494,6 +497,11 @@ select:focus-visible {
   font-size: 1.05rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere; /* never spill past the tile on very narrow screens */
+}
+@media (max-width: 560px) {
+  .bt-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bt-metric-value { font-size: 0.95rem; } /* keeps "Underperformed" on one line down to 360px */
 }
 .bt-metric-value.up { color: var(--accent); }
 .bt-metric-value.down { color: var(--error); }
