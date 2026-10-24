@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app import backtest, indicators, signals, tailoring, verdict
+from app.explainers.base import round_for_prompt, to_plain_text
 from app.schemas import ExperienceLevel
 
 
@@ -102,6 +103,15 @@ def main():
             f"exposure={res['exposure_pct']}%"
         )
     print()
+
+    # --- Explainer formatting: rounding before the prompt, Markdown after ---
+    rounded = round_for_prompt({"rsi": 63.9185, "vol": 39496500.0, "nested": [1.13724], "ok": True})
+    assert rounded == {"rsi": 63.92, "vol": 39496500, "nested": [1.14], "ok": True}, "prompt rounding"
+    md = "## Short-Term:\n**Trend:** up\n* RSI at 63.92\n- MACD above signal\nDown -1.14% today"
+    assert to_plain_text(md) == (
+        "Short-Term:\nTrend: up\n• RSI at 63.92\n• MACD above signal\nDown -1.14% today"
+    ), "markdown stripping"
+    print("== EXPLAINER FORMATTING == ok\n")
 
     print("OK — compute + tailoring + backtest pipeline works end to end.")
 

@@ -1,7 +1,7 @@
 """Explanation providers. Add a new LLM by implementing Explainer."""
 from ..config import settings
 from ..schemas import ExperienceLevel
-from .base import Explainer
+from .base import Explainer, to_plain_text
 from .claude import ClaudeExplainer
 from .gemini import GeminiExplainer
 
@@ -20,7 +20,7 @@ def get_explainer() -> Explainer:
 def generate_explanation(
     symbol: str, level: ExperienceLevel, indicators: dict, verdict: dict | None = None
 ) -> str:
-    return get_explainer().generate(symbol, level, indicators, verdict)
+    return to_plain_text(get_explainer().generate(symbol, level, indicators, verdict))
 
 
 __all__ = ["Explainer", "ClaudeExplainer", "GeminiExplainer", "get_explainer", "generate_explanation"]
