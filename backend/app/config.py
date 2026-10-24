@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     # Data providers
     finnhub_api_key: str = ""
     twelve_data_api_key: str = ""
-    price_provider: str = "finnhub"
+    price_provider: str = "twelvedata"
 
     # Explanation layer — which LLM generates the narrative
-    explain_provider: str = "claude"  # claude | gemini
+    explain_provider: str = "gemini"  # gemini | claude
 
     # Claude
     anthropic_api_key: str = ""
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # Google Gemini (free tier via https://aistudio.google.com/)
     google_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     # Storage
     database_url: str = "sqlite:///./stock_cache.db"

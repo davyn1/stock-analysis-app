@@ -1,133 +1,151 @@
 # Personalized Stock Analysis
 
-A small two-user web app: enter a ticker → fetch daily price data → compute
-technical indicators locally → Claude explains them in plain language, tailored
-to your experience level (beginner / intermediate / advanced).
+A full-stack web app that gives a plain-language technical read of any stock,
+tailored to the reader's experience level. Enter a ticker and the backend pulls
+daily price history, computes 28 technical indicators locally, and scores the
+stock as favorable, neutral or unfavorable over short, medium and long horizons
+(company fundamentals feed the long one). An LLM then explains those
+pre-computed numbers and ratings in a beginner, intermediate or advanced voice.
+It never calculates or decides anything itself. The app also shows a candlestick
+chart with detected signals and a backtester that compares simple strategies
+against buy-and-hold.
 
-See [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for the full project brief.
+## Screenshots
 
-## Architecture
+![Analysis page for AAPL](docs/screenshots/analysis.png)
 
+| Beginner explanation | Advanced explanation |
+|---|---|
+| ![Beginner explanation](docs/screenshots/explanation-beginner.png) | ![Advanced explanation](docs/screenshots/explanation-advanced.png) |
+
+![Candlestick chart with indicator overlays and signals](docs/screenshots/chart.png)
+
+![Backtester results with equity curve](docs/screenshots/backtester.png)
+
+## How it works
+
+The rule that shapes the design: **code computes, the LLM explains.** Every
+indicator value and every rating is produced by deterministic Python before the
+LLM sees anything. The prompt hands the model those numbers as JSON and forbids
+it from calculating, inventing or re-grading values. That keeps figures out of
+the model's hands, where they could be hallucinated, and makes the ratings
+reproducible.
+
+```mermaid
+flowchart LR
+    U[React UI] -->|POST /analyze| API[FastAPI]
+    API --> P{Price cache<br/>SQLite}
+    P -->|miss / stale| D[Price provider<br/>Twelve Data · yfinance · Finnhub]
+    D --> P
+    P --> I[Indicators<br/>pandas-ta]
+    API --> F[Fundamentals<br/>Finnhub, cached daily]
+    I --> V[Verdict engine<br/>deterministic rules]
+    F --> V
+    I --> T[Tailoring<br/>per experience level]
+    V --> E{Explanation cache<br/>symbol · day · level}
+    T --> E
+    E -->|miss| L[LLM explainer<br/>Gemini or Claude]
+    L --> E
+    E --> API
 ```
-ticker ─► provider (Finnhub) ─► price cache (SQLite)
-                                     │
-                                     ▼
-                          pandas-ta indicators  ─► tailoring (per level)
-                                     │
-                                     ▼
-                          Claude explanation (cached per symbol/day/level)
-```
 
-Layers map directly to files in `backend/app/`:
+1. **Price data:** daily OHLCV from a pluggable `PriceProvider`, stored in
+   SQLite and only refetched when stale.
+2. **Indicators:** RSI, MACD, Bollinger Bands, moving averages, Fibonacci
+   levels, volume-at-price and more, all computed locally with pandas-ta. That's
+   one data call per ticker instead of a paid call per indicator.
+3. **Verdict:** `verdict.py` scores each horizon from explicit, inspectable
+   factors (trend, momentum, signals and, for the long term, valuation, growth,
+   margins and leverage).
+4. **Tailoring:** each experience level sees a different subset of indicators
+   (7, 22 or 28) and different chart overlays.
+5. **Explanation:** a pluggable `Explainer` (Gemini 2.5 Flash by default, Claude
+   Haiku 4.5 optional) turns the numbers and the verdict into prose for that
+   level.
 
-| Layer          | File                       |
-|----------------|----------------------------|
-| Data provider  | `providers/finnhub.py` (interface in `providers/base.py`) |
-| Caching/DB     | `models.py`, `database.py` |
-| Indicators     | `indicators.py`            |
-| Tailoring      | `tailoring.py`             |
-| Explanation    | `explain.py`               |
-| Orchestration  | `service.py`               |
-| API            | `main.py`                  |
+## Tech stack
 
-## Setup
+| Layer | Tools |
+|---|---|
+| Backend | Python, FastAPI, SQLAlchemy, SQLite, pandas, pandas-ta, httpx |
+| LLM | Google Gemini 2.5 Flash (default) or Anthropic Claude Haiku 4.5 |
+| Market data | Twelve Data (default), yfinance, Finnhub (fundamentals) |
+| Frontend | React 18, Vite 6, TradingView lightweight-charts v5 |
+| Tooling | Offline smoke test, Playwright for screenshots |
 
-```powershell
+## Caching: at most 3 LLM calls per ticker per day
+
+Explanations are cached in SQLite under a unique key of
+`(symbol, trading day, experience level)`. With three levels, a ticker can
+trigger at most three LLM calls per trading day, however many times it's
+viewed. Price data is cached per symbol and trading day (only missing bars are
+fetched), fundamentals once per symbol per day, and intraday charts for five
+minutes in memory. Each response carries a `cached_explanation` flag, so cache
+hits are visible in the UI.
+
+## Run it locally
+
+Requires Python 3.12+ and Node 18+.
+
+**1. Backend**
+
+```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env   # then edit .env with your keys
+cp .env.example .env             # Windows: copy .env.example .env
 ```
 
-> **pandas-ta version:** the old `0.3.14b0` was pulled from PyPI. We use the
-> maintained `0.4.x` rewrite, which requires **numpy ≥ 2** (and fixes the old
-> `from numpy import NaN` bug), so numpy/pandas are left unpinned for pip to resolve.
+Fill in `backend/.env`. Both keys below are free:
 
-## Verify it works (no keys needed)
+| Variable | Purpose |
+|---|---|
+| `TWELVE_DATA_API_KEY` | Price data, from [twelvedata.com](https://twelvedata.com/). Or set `PRICE_PROVIDER=yfinance` to skip the key. |
+| `GOOGLE_API_KEY` | Gemini explanations, from [aistudio.google.com](https://aistudio.google.com/) |
+| `FINNHUB_API_KEY` | Optional. Enables fundamentals in the long-term verdict. |
+| `ANTHROPIC_API_KEY` | Optional. Use Claude instead, with `EXPLAIN_PROVIDER=claude`. |
 
-```powershell
+Without an LLM key the app still runs and shows the raw indicator values
+in place of a narrative.
+
+```bash
+uvicorn app.main:app --reload    # http://localhost:8000/docs
+```
+
+**2. Frontend** (in a second terminal)
+
+```bash
+cd frontend
+npm install
+npm run dev                      # http://localhost:5173
+```
+
+The Vite dev server proxies `/api` to the backend, so no CORS setup is needed.
+
+**Verify without keys or network:**
+
+```bash
 cd backend
 python -m scripts.smoke_test
 ```
 
-This runs the compute + tailoring layers on synthetic data — confirms pandas-ta
-imports cleanly and indicators flow through to each experience level.
+This runs the indicator, tailoring, verdict and backtest layers on synthetic
+data, with assertions.
 
-## Behind a corporate / TLS-inspecting proxy?
+**Regenerate the screenshots** (dev-only dependency, with both servers running):
 
-If `pip`/requests fail with `CERTIFICATE_VERIFY_FAILED: unable to get local
-issuer certificate`, your machine has a TLS-inspecting proxy (corporate AV/VPN).
-This only affects local dev — your AWS deployment won't have it.
-
-- **pip**: add `--trusted-host pypi.org --trusted-host files.pythonhosted.org`.
-- **Twelve Data / Finnhub / Claude**: handled automatically — the app calls
-  `truststore.inject_into_ssl()` at startup, which trusts the proxy's root cert
-  via the OS store. Nothing to do.
-- **yfinance only** (uses `curl_cffi`, which bypasses Python's trust store):
-  export the Windows cert store to a PEM and point curl at it:
-  ```powershell
-  # from backend/ (one time, regenerate if certs change)
-  .venv\Scripts\python.exe -c "import ssl,certifi,pathlib; p=pathlib.Path('win_ca_bundle.pem'); p.write_text(pathlib.Path(certifi.where()).read_text()+'\n'+'\n'.join(ssl.DER_cert_to_PEM_cert(c[0]) for s in ('ROOT','CA') for c in ssl.enum_certificates(s)))"
-  $env:CURL_CA_BUNDLE = "$PWD\win_ca_bundle.pem"   # before running uvicorn
-  ```
-
-## Run
-
-Two terminals:
-
-```powershell
-# 1) backend (from backend/, venv activated)
-#    on a corporate-proxy machine, set CURL_CA_BUNDLE first (see section above)
-uvicorn app.main:app --reload
-# -> http://localhost:8000/docs  for the interactive API
-
-# 2) frontend (from frontend/)
-npm install        # first time only
-npm run dev
-# -> http://localhost:5173   (Vite proxies /api -> backend, no CORS setup needed)
+```bash
+pip install playwright
+playwright install chromium
+python scripts/take_screenshots.py
 ```
 
-Then open **http://localhost:5173**, enter a ticker, pick an experience level.
+> Behind a TLS-inspecting corporate proxy? The backend uses the OS trust store
+> automatically. yfinance needs `CURL_CA_BUNDLE` pointed at an exported CA bundle.
 
-The frontend is a Vite + React app (`frontend/src/`). A zero-build single-file
-version is kept at `frontend/standalone.html` as a fallback — just open it in a
-browser (it calls `http://localhost:8000` directly).
+## Disclaimer
 
-You can also hit the API directly:
-
-```json
-POST /analyze   { "symbol": "AAPL", "level": "beginner" }
-```
-
-## Data providers
-
-Selected via `PRICE_PROVIDER` in `.env`. All implement the same `PriceProvider`
-interface (`app/providers/base.py`), so switching is just an env change.
-
-| `PRICE_PROVIDER` | Key needed? | Notes |
-|------------------|-------------|-------|
-| `twelvedata` (default) | free key | Official API, **works on AWS**. 800 calls/day free. |
-| `yfinance`       | none        | Zero setup, great for local testing. ⚠️ scrapes Yahoo — may be **blocked on AWS/datacenter IPs**. |
-| `finnhub`        | free key    | Free tier **lacks US historical candles** (returns 403). Kept for fundamentals later. |
-
-- **Twelve Data**: https://twelvedata.com/ → `TWELVE_DATA_API_KEY`
-- **yfinance**: no key — just set `PRICE_PROVIDER=yfinance`
-- **Finnhub**: https://finnhub.io/ → `FINNHUB_API_KEY`
-
-## Keys
-
-- **Claude** (explanations): https://console.anthropic.com/ → `ANTHROPIC_API_KEY`
-  - Without it, the pipeline still runs and returns the raw indicator dump
-    instead of a narrative, so you can develop offline.
-
-## Cost controls
-
-- Price data cached per symbol/day; explanations cached per symbol/day/level —
-  each trading day costs at most one data call + one Claude call per level.
-- Default Claude model is Haiku (cheap). Change `ANTHROPIC_MODEL` in `.env`.
-
-## Not yet in scope
-
-Charts, fundamentals, auth, intraday data — see the brief's "Out of Scope".
-```
+This is an educational project, not financial advice. The ratings come from
+simple rule-based scoring of public price and fundamentals data, and nothing
+here is a recommendation to buy or sell any security.
