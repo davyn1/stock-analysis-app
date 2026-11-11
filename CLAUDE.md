@@ -11,6 +11,10 @@ locally with pandas-ta → LLM writes a narrative tailored to experience level
 - To verify backend logic without servers or keys:
   `backend/.venv/Scripts/python.exe -m scripts.smoke_test` (run from `backend/`).
 
+## Docs
+
+- After finishing a feature or changing tests, CI, or deployment, update docs/FEATURES.md to match.
+
 ## Architecture rules
 
 - New price source → implement `PriceProvider` in `backend/app/providers/`,
